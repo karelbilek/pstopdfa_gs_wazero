@@ -1,0 +1,4 @@
+[submodule "build/patched_emscripten"]
+	path = build/patched_emscripten
+	url = git@github.com:karelbilek/emscripten.git
+	branch = implement-more-syscalls-for-standalone

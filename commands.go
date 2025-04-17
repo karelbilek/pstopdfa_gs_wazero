@@ -1,4 +1,4 @@
-package ghostscript_wazero
+package pstopdfa_gs_wazero
 
 import (
 	"context"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/karelbilek/ghostscript_wazero"
+	"github.com/karelbilek/pstopdfa_gs_wazero"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gs := ghostscript_wazero.NewGS()
+	gs := pstopdfa_gs_wazero.NewGS()
 	re, err := gs.PS2PDFA3B(context.TODO(), data)
 	if err != nil {
 		panic(err)

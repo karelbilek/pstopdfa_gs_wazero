@@ -39,5 +39,6 @@ nproc | xargs -I % emmake make \
   -j% install
 
 rm -r /out/*
-cp -r /ghostscript /out/ghostscript
+mkdir -p /out/ghostscript/share/ghostscript/9.06
+cp -r /ghostscript/share/ghostscript/9.06/lib /out/ghostscript/share/ghostscript/9.06/lib
 cp bin/gs.wasm /out/gs.wasm

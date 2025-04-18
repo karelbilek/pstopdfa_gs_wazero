@@ -10,7 +10,7 @@ The patched ghostscript is compiled with patched emscripten to wasm, which is th
 This is mostly just making sense as a part of PDF-to-PDFA conversion, which I will publish soon.
 
 License
-GPLv3
+Affero GPLv3
 
 Copyright
 (C) 2023 Karel Bilek, Jeroen Bobbeldijk (https://github.com/jerbob92)

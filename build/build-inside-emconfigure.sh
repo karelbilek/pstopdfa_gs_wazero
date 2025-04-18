@@ -20,7 +20,7 @@ mkdir -p "$OUT_DIR"
 cd "/ghostscript-src"
 
 # There is a bug in this version of Ghostscript that prevents passing in gcc to compile the build tools, replace the var manually.
-sed -i "s/CCAUX=@CC@/CCAUX=gcc/g" base/Makefile.in
+# sed -i "s/CCAUX=@CC@/CCAUX=gcc/g" base/Makefile.in
 
 emconfigure ./autogen.sh \
   CFLAGSAUX= CPPFLAGSAUX= \

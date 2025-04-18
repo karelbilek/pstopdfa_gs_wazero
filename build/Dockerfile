@@ -17,15 +17,15 @@ RUN sudo make install
 RUN apt-get update && apt-get install -y autotools-dev automake libtool
 
 # build emscripten freetype
-RUN embuilder build freetype
+# RUN embuilder build freetype
 
-# copy GNU ghostscript code
-COPY ghostscript-9.06 /ghostscript-src
+# # copy GNU ghostscript code
+COPY ghostscript-10.05.0 /ghostscript-src
 
-# replace gs with emscripten freetype
-RUN rm -Rf /ghostscript-src/freetype
-RUN mkdir /ghostscript-src/freetype
-RUN cp -R /emsdk/upstream/emscripten/cache/ports/freetype/FreeType-version_1/* /ghostscript-src/freetype
+# # replace gs with emscripten freetype
+# RUN rm -Rf /ghostscript-src/freetype
+# RUN mkdir /ghostscript-src/freetype
+# RUN cp -R /emsdk/upstream/emscripten/cache/ports/freetype/FreeType-version_1/* /ghostscript-src/freetype
 
 RUN rm -Rf /emsdk/upstream/emscripten/cache
 

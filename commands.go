@@ -59,13 +59,13 @@ func (gs *GS) basicRun(ctx context.Context, in []byte, opts []string) ([]byte, e
 // PDF2PDFA converts PDF to PDF/A.
 func (gs *GS) PS2PDFA3B(ctx context.Context, pdf []byte) ([]byte, error) {
 	return gs.basicRun(ctx, pdf, []string{
-		`-dPDFA=2`, // hack... we act like it's 3... we hard-code 3 with our patched GhostScript...
+		`-dPDFA=3`, // hack... we act like it's 3... we hard-code 3 with our patched GhostScript...
 		`-dBATCH`,
 		`-dNOPAUSE`,
-		`-dUseCIEColor`,
-		`-sProcessColorModel=DeviceCMYK`,
-		`-dUseCIEColor`,
-		`-sColorConversionStrategy=/UseDeviceIndependentColor`,
+		// `-dUseCIEColor`,
+		// `-sProcessColorModel=DeviceCMYK`,
+		// `-dUseCIEColor`,
+		// `-sColorConversionStrategy=/UseDeviceIndependentColor`,
 		`-sDEVICE=pdfwrite`,
 		`-dPDFACompatibilityPolicy=2`,
 		`-sOutputFile=outfile`,

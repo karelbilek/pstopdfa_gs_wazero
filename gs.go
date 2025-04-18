@@ -2,26 +2,31 @@ package pstopdfa_gs_wazero
 
 import (
 	"context"
+	"crypto/rand"
 	"embed"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log"
+	"os"
 
+	"github.com/tetratelabs/wazero/experimental"
+	"github.com/tetratelabs/wazero/experimental/logging"
 	"github.com/tetratelabs/wazero/experimental/sys"
 	"github.com/tetratelabs/wazero/experimental/sysfs"
 
 	"github.com/karelbilek/wazero-fs-tools/memfs"
+
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/emscripten"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
-//go:embed build/out/gs.wasm
+//go:embed build/out/bin/gs.wasm
 var gsWasm []byte
 
-//go:embed build/out/ghostscript
+//go:embed build/out/gs
 var sharedFiles embed.FS
 
 type GS struct {
@@ -71,6 +76,7 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 	memFS := memfs.New()
 
 	tracked := &memFSTrackFiles{MemFS: memFS}
+	// trackedF := wraplogfs.New(tracked, os.Stdout, false, "neco")
 
 	errno := memFS.Mkdir("tmp", 0)
 	if errno != 0 {
@@ -84,8 +90,11 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 		}
 	}
 
+	// memFStmp := memfs.New()
 	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sharedFS, "/ghostscript")
-	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(tracked, "/")
+	// fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(memFStmp, "/tmp")
+
+	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sysfs.DirFS("/tmp"), "/")
 
 	gsArgs := []string{"gs"}
 	gsArgs = append(gsArgs, args...)
@@ -95,6 +104,10 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 		WithStdout(stdOut).
 		WithStderr(stdErr).
 		WithFSConfig(fsConfig).
+		WithRandSource(rand.Reader).
+		WithSysWalltime().
+		WithSysNanotime().
+		WithSysNanosleep().
 		WithName("").
 		WithArgs(gsArgs...)
 
@@ -125,7 +138,7 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 }
 
 func NewGS() *GS {
-	ctx := context.Background()
+	ctx := context.WithValue(context.Background(), experimental.FunctionListenerFactoryKey{}, logging.NewHostLoggingListenerFactory(os.Stdout, logging.LogScopeAll))
 	runtimeConfig := wazero.NewRuntimeConfig()
 	wazeroRuntime := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
 

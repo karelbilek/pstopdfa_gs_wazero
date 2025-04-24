@@ -8,11 +8,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
-	"os"
+	"sync/atomic"
 
-	"github.com/tetratelabs/wazero/experimental"
-	"github.com/tetratelabs/wazero/experimental/logging"
 	"github.com/tetratelabs/wazero/experimental/sys"
 	"github.com/tetratelabs/wazero/experimental/sysfs"
 
@@ -23,16 +20,14 @@ import (
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
-//go:embed build/out/bin/gs.wasm
+//go:embed build/out/gs.wasm
 var gsWasm []byte
 
-//go:embed build/out/gs
+//go:embed build/out/ghostscript_lib
 var sharedFiles embed.FS
 
-type GS struct {
-	module  wazero.CompiledModule
-	runtime wazero.Runtime
-}
+//go:embed gs_profiles
+var gsProfiles embed.FS
 
 type File struct {
 	Path    string
@@ -63,20 +58,15 @@ var (
 	ErrCannotReadResultFile     = errors.New("cannot read result file")
 )
 
-func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []File) (map[string]File, error) {
-
-	sub, err := fs.Sub(sharedFiles, "build/out/ghostscript")
-	if err != nil {
-		panic(err)
-	}
-
+func Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []File) (map[string]File, error) {
 	fsConfig := wazero.NewFSConfig()
-	sharedFS := &sysfs.AdaptFS{FS: sub}
+
+	sharedFS := &sysfs.AdaptFS{FS: sharedFilesCut}
+	gsProfilesFS := &sysfs.AdaptFS{FS: gsProfilesCut}
 
 	memFS := memfs.New()
 
 	tracked := &memFSTrackFiles{MemFS: memFS}
-	// trackedF := wraplogfs.New(tracked, os.Stdout, false, "neco")
 
 	errno := memFS.Mkdir("tmp", 0)
 	if errno != 0 {
@@ -91,10 +81,11 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 	}
 
 	// memFStmp := memfs.New()
-	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sharedFS, "/ghostscript")
+	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sharedFS, "/ghostscript/share/ghostscript/10.05.0/lib")
 	// fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(memFStmp, "/tmp")
+	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(gsProfilesFS, "/gs_profiles")
 
-	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sysfs.DirFS("/tmp"), "/")
+	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(tracked, "/")
 
 	gsArgs := []string{"gs"}
 	gsArgs = append(gsArgs, args...)
@@ -111,7 +102,7 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 		WithName("").
 		WithArgs(gsArgs...)
 
-	_, err = gs.runtime.InstantiateModule(ctx, gs.module, moduleConfig)
+	_, err := wruntime.InstantiateModule(ctx, compiled, moduleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrRunningGhostscriptModule, err)
 	}
@@ -137,25 +128,48 @@ func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, 
 	return resFiles, nil
 }
 
-func NewGS() *GS {
-	ctx := context.WithValue(context.Background(), experimental.FunctionListenerFactoryKey{}, logging.NewHostLoggingListenerFactory(os.Stdout, logging.LogScopeAll))
+var compiled wazero.CompiledModule
+var wruntime wazero.Runtime
+var gsProfilesCut fs.FS
+var sharedFilesCut fs.FS
+
+var inited atomic.Bool
+
+// DoInit inits; it is safe to call concurrently; only first will init
+func DoInit() {
+	if inited.Swap(true) {
+		// do not init again
+		return
+	}
+
+	var err error
+	gsProfilesCut, err = fs.Sub(gsProfiles, "gs_profiles")
+	if err != nil {
+		panic(err)
+	}
+
+	sharedFilesCut, err = fs.Sub(sharedFiles, "build/out/ghostscript_lib")
+	if err != nil {
+		panic(err)
+	}
+
+	ctx := context.Background()
+	// ctx := experimental.WithFunctionListenerFactory(context.Background(), logging.NewHostLoggingListenerFactory(os.Stdout, logging.LogScopeAll))
 	runtimeConfig := wazero.NewRuntimeConfig()
 	wazeroRuntime := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
 
 	if _, err := wasi_snapshot_preview1.Instantiate(ctx, wazeroRuntime); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	compiledModule, err := wazeroRuntime.CompileModule(ctx, gsWasm)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	if _, err := emscripten.InstantiateForModule(ctx, wazeroRuntime, compiledModule); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	return &GS{
-		module:  compiledModule,
-		runtime: wazeroRuntime,
-	}
+	compiled = compiledModule
+	wruntime = wazeroRuntime
 }

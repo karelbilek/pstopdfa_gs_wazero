@@ -13,8 +13,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gs := pstopdfa_gs_wazero.NewGS()
-	re, err := gs.PS2PDFA3B(context.TODO(), data)
+	pstopdfa_gs_wazero.DoInit()
+	re, err := pstopdfa_gs_wazero.PDF2PDFA3b(context.TODO(), false, data)
 	if err != nil {
 		panic(err)
 	}

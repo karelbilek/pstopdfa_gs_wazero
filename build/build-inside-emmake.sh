@@ -25,7 +25,7 @@ export GS_LDFLAGS="\
 -s ALLOW_MEMORY_GROWTH=1 \
 -s WASM=1 \
 -s ALLOW_MEMORY_GROWTH=1 \
--s TOTAL_MEMORY=3221225472 \
+-s TOTAL_MEMORY=25165824 \
 -s MAXIMUM_MEMORY=4294967296 \
 -s STANDALONE_WASM=1 \
 -sERROR_ON_UNDEFINED_SYMBOLS=0 \
@@ -43,8 +43,6 @@ nproc | xargs -I % emmake make \
   -j% install
 
 rm -rf /out/*
-# mkdir -p /out/ghostscript/share/ghostscript/9.06
-# cp -r /ghostscript/share/ghostscript/9.06/lib /out/ghostscript/share/ghostscript/9.06/lib
-# cp bin/gs.wasm /out/gs.wasm
-cp -r bin/ /out/bin
-cp -r   /ghostscript/  /out/gs
+mkdir -p /out/ghostscript_lib
+cp -r /ghostscript/share/ghostscript/10.05.0/lib /out/ghostscript_lib
+cp bin/gs.wasm /out/gs.wasm

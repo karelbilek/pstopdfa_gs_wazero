@@ -3,14 +3,16 @@ ghostscriptwazero
 
 Go library with Ghostscript (currently 10.5.1), built to WASM, run with Wazero with fake memory filesystem.
 
-This is NOT a generic WASM/WASI ghostcript port! This is _just_ for wazero. Ghostscript is
+This is NOT a generic WASM/WASI ghostcript port! This is _just_ for wazero. Ghostscript is using setjmp/longjmp,
+it's not really clear how to use that in generic WASI.
 
 This is mostly just making sense as a part of my PDF-to-PDFA conversion tool. But the whole thing can be use as ghostscript in the backend, from go, without cgo, on all go platforms!
 
 It works on all platforms where Go works; it was tested on Linux, Windows and Mac.
 
 The build of the wasm is a bit crazy, as it uses a custom fork of emscripten that produces
-wasm that only works in wazero, and it uses a patched ghostscript. But it works...?
+wasm that only works in wazero, and it uses a patched ghostscript. The patched emscripten is necessary for
+setjmp/longjmp support; patched ghostscript to remove some indirect calls.
 
 Note that only PDF-to-PDFA is really tested. I am accepting issues when something else doesn't work,
 but only if you attach the input files.

@@ -1,4 +1,4 @@
-module github.com/karelbilek/ghostscriptwasm
+module github.com/karelbilek/ghostscriptwazero
 
 go 1.22.0
 

@@ -1,4 +1,4 @@
-package ghostscriptwasm
+package ghostscriptwazero
 
 import (
 	"context"

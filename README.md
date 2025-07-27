@@ -1,4 +1,4 @@
-ghostscriptwasm
+ghostscriptwazero
 ===
 
 Go library with Ghostscript (currently 10.5.1), built to WASM, run with Wazero with fake memory filesystem.
@@ -18,7 +18,7 @@ but only if you attach the input files.
 ### How to use
 See pdf2pdfa3b, which is a library + a cmd tool that tries to convert from PDF to PDF/A 3b.
 
-You first need to init new GS runtime with `ghostscriptwasm.New()`, which creates a new runtime. Then you can use it with .Run() or .BasicRun(). Each run creates a new fake directory in memory. There is no read or write from disk; all files are either in memory or embeded in the binary.
+You first need to init new GS runtime with `ghostscriptwazero.New()`, which creates a new runtime. Then you can use it with .Run() or .BasicRun(). Each run creates a new fake directory in memory. There is no read or write from disk; all files are either in memory or embeded in the binary.
 
 ### License
 

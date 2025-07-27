@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/karelbilek/ghostscriptwasm"
-	"github.com/karelbilek/ghostscriptwasm/pdf2pdfa3b"
+	"github.com/karelbilek/ghostscriptwazero"
+	"github.com/karelbilek/ghostscriptwazero/pdf2pdfa3b"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gs, err := ghostscriptwasm.NewGS(context.Background())
+	gs, err := ghostscriptwazero.NewGS(context.Background())
 	if err != nil {
 		panic(err)
 	}

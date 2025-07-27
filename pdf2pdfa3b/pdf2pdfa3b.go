@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/karelbilek/ghostscriptwasm"
+	"github.com/karelbilek/ghostscriptwazero"
 )
 
 type ErrPdfaReverted struct {
@@ -17,7 +17,7 @@ func (e *ErrPdfaReverted) Error() string {
 }
 
 // PDF2PDFA converts PDF to PDF/A 3b.
-func PDF2PDFA3b(ctx context.Context, gs *ghostscriptwasm.GS, policy int, paintFont bool, pdf []byte) ([]byte, error) {
+func PDF2PDFA3b(ctx context.Context, gs *ghostscriptwazero.GS, policy int, paintFont bool, pdf []byte) ([]byte, error) {
 
 	opts := []string{
 		`-dNOSAFER`,

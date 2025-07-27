@@ -3,9 +3,17 @@ ghostscriptwasm
 
 Go library with Ghostscript (currently 10.5.1), built to WASM, run with Wazero with fake memory filesystem.
 
+This is NOT a generic WASM/WASI ghostcript port! This is _just_ for wazero. Ghostscript is
+
 This is mostly just making sense as a part of my PDF-to-PDFA conversion tool. But the whole thing can be use as ghostscript in the backend, from go, without cgo, on all go platforms!
 
 It works on all platforms where Go works; it was tested on Linux, Windows and Mac.
+
+The build of the wasm is a bit crazy, as it uses a custom fork of emscripten that produces
+wasm that only works in wazero, and it uses a patched ghostscript. But it works...?
+
+Note that only PDF-to-PDFA is really tested. I am accepting issues when something else doesn't work,
+but only if you attach the input files.
 
 ### How to use
 See pdf2pdfa3b, which is a library + a cmd tool that tries to convert from PDF to PDF/A 3b.
@@ -18,8 +26,6 @@ NOTE THAT THE WHOLE THING IS AFFERO GPL, because Ghostscript itself is Affero GP
 
 If you want a GPLv3 version, you can use GS version 9.06 (it's safe as it is contained with no access to FS) - see here https://github.com/karelbilek/ghostscript-9.06 - but I don't want to maintain it.
 
-The build of the wasm is a bit crazy, as it uses a custom fork of emscripten that produces
-wasm that only works in wazero. But it works...?
 
 License:
 

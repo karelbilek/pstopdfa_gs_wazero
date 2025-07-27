@@ -1,4 +1,4 @@
-package pstopdfa_gs_wazero
+package ghostscriptwasm
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"sync/atomic"
+	"strings"
 
 	"github.com/tetratelabs/wazero/experimental/sys"
 	"github.com/tetratelabs/wazero/experimental/sysfs"
@@ -58,7 +58,7 @@ var (
 	ErrCannotReadResultFile     = errors.New("cannot read result file")
 )
 
-func Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []File) (map[string]File, error) {
+func (gs *GS) Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []File) (map[string]File, error) {
 	fsConfig := wazero.NewFSConfig()
 
 	sharedFS := &sysfs.AdaptFS{FS: sharedFilesCut}
@@ -81,7 +81,7 @@ func Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []F
 	}
 
 	// memFStmp := memfs.New()
-	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sharedFS, "/ghostscript/share/ghostscript/10.05.0/lib")
+	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(sharedFS, "/ghostscript/share/ghostscript/10.06.0/lib")
 	// fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(memFStmp, "/tmp")
 	fsConfig = fsConfig.(sysfs.FSConfig).WithSysFSMount(gsProfilesFS, "/gs_profiles")
 
@@ -102,7 +102,7 @@ func Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []F
 		WithName("").
 		WithArgs(gsArgs...)
 
-	_, err := wruntime.InstantiateModule(ctx, compiled, moduleConfig)
+	_, err := gs.wruntime.InstantiateModule(ctx, gs.compiled, moduleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrRunningGhostscriptModule, err)
 	}
@@ -128,20 +128,75 @@ func Run(ctx context.Context, stdOut, stdErr io.Writer, args []string, files []F
 	return resFiles, nil
 }
 
-var compiled wazero.CompiledModule
-var wruntime wazero.Runtime
+type ErrRunningGhostscript struct {
+	Err    error
+	StdOut string
+	StdErr string
+}
+
+func (e *ErrRunningGhostscript) Error() string {
+	return fmt.Sprintf("error running ghostscript: %v\n\nStdout:\n%s\n\nStderr:\n%s", e.Err, e.StdOut, e.StdErr)
+}
+
+func (e *ErrRunningGhostscript) Unwrap() error {
+	return e.Err
+}
+
+type ErrMissingFile struct {
+	ResultFileName string
+	StdOut         string
+	StdErr         string
+}
+
+func (e *ErrMissingFile) Error() string {
+	return fmt.Sprintf("missing ghostscript result file %s.\n\nStdout:\n%s\n\nStderr:\n%s", e.ResultFileName, e.StdOut, e.StdErr)
+}
+
+func (gs *GS) BasicRun(ctx context.Context, in []byte, opts []string) ([]byte, string, error) {
+	stdout := &strings.Builder{}
+	stderr := &strings.Builder{}
+	files, err := gs.Run(ctx, stdout, stderr, opts, []File{{
+		Path:    `infile`,
+		Content: in,
+	}})
+	if err != nil {
+		return nil, stderr.String(), &ErrRunningGhostscript{
+			Err:    err,
+			StdOut: stdout.String(),
+			StdErr: stderr.String(),
+		}
+	}
+	stderrS := stderr.String()
+
+	if strings.Contains(stderrS, "The following errors") || strings.Contains(stderrS, "error occurred") {
+		return nil, stderrS, &ErrRunningGhostscript{
+			Err:    fmt.Errorf("error on conversion"),
+			StdOut: stdout.String(),
+			StdErr: stderrS,
+		}
+	}
+
+	for k, v := range files {
+		if k == "outfile" {
+			return v.Content, stderrS, nil
+		}
+	}
+	return nil, stderrS, &ErrMissingFile{
+		ResultFileName: "outfile",
+		StdOut:         stdout.String(),
+		StdErr:         stderr.String(),
+	}
+}
+
+type GS struct {
+	compiled wazero.CompiledModule
+	wruntime wazero.Runtime
+}
+
 var gsProfilesCut fs.FS
 var sharedFilesCut fs.FS
 
-var inited atomic.Bool
-
-// DoInit inits; it is safe to call concurrently; only first will init
-func DoInit() {
-	if inited.Swap(true) {
-		// do not init again
-		return
-	}
-
+func init() {
 	var err error
 	gsProfilesCut, err = fs.Sub(gsProfiles, "gs_profiles")
 	if err != nil {
@@ -152,24 +207,27 @@ func DoInit() {
 	if err != nil {
 		panic(err)
 	}
+}
 
-	ctx := context.Background()
+func NewGS(ctx context.Context) (*GS, error) {
 	// ctx := experimental.WithFunctionListenerFactory(context.Background(), logging.NewHostLoggingListenerFactory(os.Stdout, logging.LogScopeAll))
 	runtimeConfig := wazero.NewRuntimeConfig()
 	wazeroRuntime := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
 
 	if _, err := wasi_snapshot_preview1.Instantiate(ctx, wazeroRuntime); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	compiledModule, err := wazeroRuntime.CompileModule(ctx, gsWasm)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if _, err := emscripten.InstantiateForModule(ctx, wazeroRuntime, compiledModule); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	compiled = compiledModule
-	wruntime = wazeroRuntime
+	return &GS{
+		compiled: compiledModule,
+		wruntime: wazeroRuntime,
+	}, nil
 }

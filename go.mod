@@ -1,4 +1,4 @@
-module github.com/karelbilek/pstopdfa_gs_wazero
+module github.com/karelbilek/ghostscriptwasm
 
 go 1.22.0
 

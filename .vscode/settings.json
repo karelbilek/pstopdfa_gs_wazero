@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "unistd_.h": "c",
+        "unistd.h": "c",
+        "*.prebuilt": "cpp",
+        "setjmp.h": "c"
+    }
+}
